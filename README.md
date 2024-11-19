@@ -44,7 +44,7 @@ GITHUB_API_URL=https://api.github.com
 GITHUB_TOKEN=your_github_token_placeholder
 EMAIL_SMTP_SERVER=mail.example.com
 EMAIL_FROM=usametallica@gmail.com
-EMAIL_TO=recipient_email@example.com
+EMAIL_TO=usametallica@gmail.com
 EMAIL_PASSWORD=your_email_password_placeholder
 NOTIFICATION_FREQUENCY=daily
 
