@@ -1,9 +1,8 @@
-import argparse
+# GitHubSentinel.py
 import threading
 import time
 import schedule
 import requests
-from datetime import datetime
 from SubscriptionManager import SubscriptionManager
 from UpdateRetriever import UpdateRetriever
 from NotificationSystem import NotificationSystem
@@ -16,6 +15,7 @@ class GitHubSentinel:
         self.update_retriever = UpdateRetriever(Config.GITHUB_TOKEN)
         self.notification_system = NotificationSystem()
         self.report_generator = ReportGenerator()
+        self.scheduler_thread = None
 
     def fetch_and_notify_updates(self):
         """获取仓库更新并发送通知"""
@@ -53,18 +53,21 @@ class GitHubSentinel:
 
     def start_scheduler(self):
         """启动调度器线程"""
-        scheduler_thread = threading.Thread(target=self.schedule_updates, daemon=True)
-        scheduler_thread.start()
+        if not self.scheduler_thread or not self.scheduler_thread.is_alive():
+            self.scheduler_thread = threading.Thread(target=self.schedule_updates, daemon=True)
+            self.scheduler_thread.start()
 
     def add_subscription(self, repo_url):
         """添加一个 GitHub 仓库订阅"""
         self.subscription_manager.add_subscription(repo_url)
         print(f"已添加仓库 {repo_url} 到订阅列表。")
+        self.print_help()
 
     def remove_subscription(self, repo_url):
         """移除 GitHub 仓库订阅"""
         self.subscription_manager.remove_subscription(repo_url)
         print(f"已移除仓库 {repo_url}。")
+        self.print_help()
 
     def list_subscriptions(self):
         """列出所有订阅的仓库"""
@@ -72,18 +75,23 @@ class GitHubSentinel:
         print("当前订阅的仓库：")
         for repo in subscriptions:
             print(f"- {repo}")
+        self.print_help()
 
     def run_update(self):
         """立即获取更新并发送报告"""
         self.fetch_and_notify_updates()
+        self.print_help()
 
     def show_status(self):
         """显示当前工具状态"""
         print(f"当前通知频率：{Config.NOTIFICATION_FREQUENCY}")
         print("定时器正在后台运行，等待执行...")
+        self.print_help()
 
     def print_help(self):
         """打印帮助信息"""
+        print("\nGitHub Sentinel 使用指南：")
+        print("这是一个交互式工具，用于管理 GitHub 仓库的订阅、获取更新以及生成报告。您可以使用以下命令来操作工具：")
         print("\n可用命令：")
         print("add <repo_url>    添加一个 GitHub 仓库到订阅列表")
         print("remove <repo_url> 移除一个 GitHub 仓库")
@@ -109,13 +117,17 @@ class GitHubSentinel:
                 f"发布说明: {release_info.get('body')}\n"
             )
             print(report)
+            self.print_help()
             return report
         else:
             print(f"获取版本信息失败: {response.status_code}")
+            self.print_help()
             return "获取版本信息失败"
 
     def interactive_mode(self):
         """交互式命令行模式"""
+        self.start_scheduler()  # 启动后台调度任务
+        self.print_help()  # 启动时打印帮助信息
         while True:
             command = input("\n请输入命令：")
 
@@ -142,14 +154,10 @@ class GitHubSentinel:
                 break
             else:
                 print("无效命令，请重新输入。")
-            
-            # 每次执行完命令后打印可用命令
-            self.print_help()
+                self.print_help()
 
     def run(self):
         """启动 GitHub Sentinel"""
-        self.print_help()  # 启动时打印帮助信息
-        self.start_scheduler()  # 启动后台调度任务
         self.interactive_mode()  # 启动命令行交互模式
 
 # 启动项目
