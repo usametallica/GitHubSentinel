@@ -7,6 +7,9 @@ from SubscriptionManager import SubscriptionManager
 from UpdateRetriever import UpdateRetriever
 from NotificationSystem import NotificationSystem
 from ReportGenerator import ReportGenerator
+from DailyProgressExporter import DailyProgressExporter
+from LLMClient import LLMClient
+from ReportGeneratorExtended import ReportGeneratorExtended
 from Config import Config
 
 class GitHubSentinel:
@@ -15,6 +18,9 @@ class GitHubSentinel:
         self.update_retriever = UpdateRetriever(Config.GITHUB_TOKEN)
         self.notification_system = NotificationSystem()
         self.report_generator = ReportGenerator()
+        self.daily_progress_exporter = DailyProgressExporter(Config.GITHUB_TOKEN)
+        self.llm_client = LLMClient()
+        self.report_generator_extended = ReportGeneratorExtended(self.llm_client)
         self.scheduler_thread = None
 
     def fetch_and_notify_updates(self):
@@ -39,6 +45,16 @@ class GitHubSentinel:
             print("更新已获取并发送通知。")
         else:
             print("未能获取到任何更新。")
+
+    def export_daily_progress(self, repo_url):
+        """导出每日进展到 Markdown 文件"""
+        data = self.daily_progress_exporter.fetch_issues_and_pulls(repo_url)
+        self.daily_progress_exporter.export_to_markdown(repo_url, data)
+
+    def generate_daily_report(self, repo_url):
+        """生成每日项目报告"""
+        data = self.daily_progress_exporter.fetch_issues_and_pulls(repo_url)
+        self.report_generator_extended.generate_daily_report(repo_url, data.get("issues", []), data.get("pulls", []))
 
     def schedule_updates(self):
         """在后台定期获取更新"""
@@ -100,6 +116,8 @@ class GitHubSentinel:
         print("status            查看当前工具的状态")
         print("help              查看帮助信息")
         print("report            获取仓库的最新版本信息，格式为：report <repo_url>")
+        print("export <repo_url> 导出指定仓库的每日进展")
+        print("generate <repo_url> 生成指定仓库的每日项目报告")
         print("exit              退出工具")
 
     def get_latest_release_info(self, repo_url):
@@ -149,6 +167,12 @@ class GitHubSentinel:
             elif command.startswith("report "):
                 repo_url = command[7:] if len(command) > 7 else input("请输入仓库 URL: ")
                 self.get_latest_release_info(repo_url)
+            elif command.startswith("export "):
+                repo_url = command[7:]
+                self.export_daily_progress(repo_url)
+            elif command.startswith("generate "):
+                repo_url = command[9:]
+                self.generate_daily_report(repo_url)
             elif command == "exit":
                 print("退出工具...")
                 break
